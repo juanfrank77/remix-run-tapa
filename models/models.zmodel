@@ -1,0 +1,173 @@
+enum UserStatus {
+    INVITED
+    VERIFIED
+}
+
+model User {
+    id               String            @id @default(uuid())
+    name             String?
+    email            String?           @unique
+    pictureUrl       String?           @default('https://i.imgur.com/ZdJSK3Y.jpeg')
+    tokenInvitation  String?
+
+    stripeCustomerId String?
+
+    status           UserStatus        @default(VERIFIED)
+
+    // this is the role of the user for the application
+    globalRole       String            @default('USER')
+    password         String?           @password @omit
+    createdAt        DateTime          @default(now())
+    updatedAt        DateTime          @updatedAt @default(now())
+
+    pwaSubscriptions PwaSubscription[] @relation("user")
+
+    chats            Chat[]            @relation("user")
+    recipes          Recipe[]          @relation("user")
+    folders          Folder[]          @relation("user")
+    messages         Message[]         @relation("user")
+    files            File[]            @relation("user")
+    feedbacks        Feedback[]        @relation("user")
+
+    @@auth()
+    @@allow("all", auth().id == this.id)
+    @@allow('all', auth().globalRole == 'ADMIN')
+
+    //we only allow that user to register if they don't create an admin role
+    @@allow("create", globalRole != 'ADMIN')
+    @@allow("read", true)
+}
+
+model Chat {
+
+    id        String    @id @default(uuid())
+
+    userId    String
+    user      User?     @relation(fields: [userId], references: [id], name: "user")
+
+    messages  Message[] @relation("chat")
+    createdAt DateTime  @default(now())
+    updatedAt DateTime  @updatedAt @default(now())
+    @@allow("all", true)
+}
+
+model AiModel {
+
+    id          String    @id @default(uuid())
+    name        String?
+    description String?
+    version     String?
+
+    messages    Message[] @relation("aiModel")
+    createdAt   DateTime  @default(now())
+    updatedAt   DateTime  @updatedAt @default(now())
+    @@allow("all", true)
+}
+
+model Recipe {
+
+    id           String   @id @default(uuid())
+    title        String?
+    description  String?
+    ingredients  String?
+    instructions String?
+
+    userId       String
+    user         User?    @relation(fields: [userId], references: [id], name: "user")
+
+    createdAt    DateTime @default(now())
+    updatedAt    DateTime @updatedAt @default(now())
+    @@allow("all", true)
+}
+
+model Folder {
+
+    id                    String   @id @default(uuid())
+    name                  String?
+
+    userId                String
+    user                  User?    @relation(fields: [userId], references: [id], name: "user")
+    parentFolderId        String?
+    parentFolder          Folder?  @relation(fields: [parentFolderId], references: [id], name: "parentFolder")
+
+    foldersAsParentFolder Folder[] @relation("parentFolder")
+    files                 File[]   @relation("folder")
+    createdAt             DateTime @default(now())
+    updatedAt             DateTime @updatedAt @default(now())
+    @@allow("all", true)
+}
+
+model Message {
+
+    id        String   @id @default(uuid())
+    content   String?
+
+    chatId    String
+    chat      Chat?    @relation(fields: [chatId], references: [id], name: "chat")
+    userId    String
+    user      User?    @relation(fields: [userId], references: [id], name: "user")
+    aiModelId String
+    aiModel   AiModel? @relation(fields: [aiModelId], references: [id], name: "aiModel")
+
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt @default(now())
+    @@allow("all", true)
+}
+
+model File {
+
+    id        String   @id @default(uuid())
+    name      String?
+    fileUrl   String?
+    fileType  String?
+    size      Float?
+
+    userId    String
+    user      User?    @relation(fields: [userId], references: [id], name: "user")
+    folderId  String
+    folder    Folder?  @relation(fields: [folderId], references: [id], name: "folder")
+
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt @default(now())
+    @@allow("all", true)
+}
+
+model Feedback {
+
+    id        String   @id @default(uuid())
+    content   String?
+    rating    Float?
+
+    userId    String
+    user      User?    @relation(fields: [userId], references: [id], name: "user")
+
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt @default(now())
+    @@allow("all", true)
+}
+
+model LearningResource {
+
+    id           String   @id @default(uuid())
+    title        String?
+    description  String?
+    contentUrl   String?
+    resourceType String?
+
+    createdAt    DateTime @default(now())
+    updatedAt    DateTime @updatedAt @default(now())
+    @@allow("all", true)
+}
+
+model PwaSubscription {
+    id        String   @id @default(uuid())
+    content   String
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt @default(now())
+
+    userId    String   @default(auth().id)
+    user      User     @relation(fields: [userId], references: [id], name: 'user')
+
+    @@allow("all", true)
+}
+
